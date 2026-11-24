@@ -1,0 +1,115 @@
+"""Sanal Donanim Durum Paneli (8 bitlik durum yazmaci)."""
+
+DONANIMLAR = [
+    "Güç (Power)",
+    "Wi-Fi",
+    "Bluetooth",
+    "Kamera",
+    "Mikrofon",
+    "GPS",
+    "Hoparlör",
+    "Fan (Soğutma)",
+]
+
+BIT_SAYISI = 8
+BYTE_MASKESI = (1 << BIT_SAYISI) - 1
+
+
+def ikili_goster(deger: int) -> str:
+    """Değeri sekiz bitlik ikili metin olarak döndürür."""
+    return format(deger & BYTE_MASKESI, "08b")
+
+
+def durum_paneli_goster(status_register: int) -> None:
+    """8 bitlik yazmacı ve her donanımın durumunu gösterir."""
+    binary_str = ikili_goster(status_register)
+
+    print("\n" + "=" * 66)
+    print("                 SANAL DONANIM DURUM PANELİ (8-BIT)")
+    print("=" * 66)
+    print(f"Yazmaç (Ondalık): {status_register} | Onaltılık: 0x{status_register:02X}")
+    print(f"Yazmaç (İkilik) : {binary_str}")
+    print("-" * 66)
+    print("Bit No   : |  7  |  6  |  5  |  4  |  3  |  2  |  1  |  0  |")
+    bit_kutulari = " | ".join(f" {bit} " for bit in binary_str)
+    print(f"Bit Değ. : | {bit_kutulari} |")
+    print("-" * 66)
+
+    for bit_no, isim in enumerate(DONANIMLAR):
+        maske = 1 << bit_no
+        aktif_mi = (status_register & maske) != 0
+        etiket = "[ ACIK (1) ]" if aktif_mi else "[ KAPALI (0) ]"
+        print(f"Bit {bit_no} ({maske:3d} / 0b{maske:08b}) -> {isim:<16} : {etiket}")
+    print("=" * 66)
+
+
+def bit_sec() -> int | None:
+    """Kullanıcıdan 0-7 arasında geçerli bir bit numarası alır."""
+    print("\nDonanım listesi:")
+    for i, isim in enumerate(DONANIMLAR):
+        print(f"  {i} -> {isim}")
+
+    secim = input("İşlem yapılacak bit numarasını girin (0-7): ").strip()
+    if secim.isdigit() and 0 <= int(secim) < BIT_SAYISI:
+        return int(secim)
+
+    print("\n[HATA] Lütfen 0 ile 7 arasında geçerli bir sayı girin!")
+    return None
+
+
+def main() -> None:
+    """Ana menü döngüsünü ve yazmaç işlemlerini yönetir."""
+    status_register = 0b00000000
+    durum_paneli_goster(status_register)
+
+    while True:
+        print("\n--- KONTROL MENÜSÜ ---")
+        print("1- Durumları gör")
+        print("2- Bir özelliği aç (Bitwise OR: |)")
+        print("3- Bir özelliği kapat (Bitwise AND ve NOT: & ~)")
+        print("4- Bir özelliği tersine çevir (Bitwise XOR: ^)")
+        print("0- Çıkış")
+
+        secim = input("\nSeçiminiz: ").strip()
+
+        if secim == "1":
+            durum_paneli_goster(status_register)
+        elif secim in ("2", "3", "4"):
+            bit = bit_sec()
+            if bit is None:
+                continue
+
+            maske = 1 << bit
+            onceki = status_register
+
+            if secim == "2":
+                status_register = (status_register | maske) & BYTE_MASKESI
+                islem_metni = "OR"
+                sonuc_metni = f"0b{onceki:08b} | 0b{maske:08b}"
+                eylem = "ACILDI"
+            elif secim == "3":
+                status_register = status_register & (~maske & BYTE_MASKESI)
+                islem_metni = "AND-NOT"
+                sonuc_metni = f"0b{onceki:08b} & ~(0b{maske:08b})"
+                eylem = "KAPATILDI"
+            else:
+                status_register = (status_register ^ maske) & BYTE_MASKESI
+                islem_metni = "XOR"
+                sonuc_metni = f"0b{onceki:08b} ^ 0b{maske:08b}"
+                eylem = "DURUMU TERSİNE ÇEVRİLDİ"
+
+            print(
+                f"\n[ISLEM - {islem_metni}] {DONANIMLAR[bit]} {eylem} -> "
+                f"{sonuc_metni} = 0b{status_register:08b}"
+            )
+            durum_paneli_goster(status_register)
+
+        elif secim == "0":
+            print("\nSimülatör kapatılıyor. İyi günler!")
+            break
+        else:
+            print("\n[UYARI] Geçersiz seçim! Lütfen 0-4 arasında bir seçim yapın.")
+
+
+if __name__ == "__main__":
+    main()
